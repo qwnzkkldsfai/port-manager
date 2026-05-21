@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>本地端口管理器</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+  <body>
+    <header class="top-bar">
+      <div class="brand">本地端口管理器</div>
+      <div class="actions">
+        <span id="admin-badge" class="badge"></span>
+        <button id="btn-elevate" hidden>重启为管理员</button>
+        <span id="refreshed-at" class="muted">尚未刷新</span>
+        <button id="btn-refresh" class="primary">刷新</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="listening">实时占用</button>
+      <button class="tab" data-tab="recommend">空闲段推荐</button>
+      <button class="tab" data-tab="query">端口查询</button>
+      <button class="tab" data-tab="declared">声明库</button>
+      <button class="tab" data-tab="scan">配置扫描</button>
+      <button class="tab" data-tab="excluded">系统排除段</button>
+    </nav>
+
+    <main>
+      <!-- 实时占用 -->
+      <section class="page active" id="page-listening">
+        <div class="page-head">
+          <h2>正在监听的端口</h2>
+          <div class="filter-row">
+            <input id="filter-listening" placeholder="按端口/进程名/协议筛选..." />
+            <label><input type="checkbox" id="filter-tcp" checked /> TCP</label>
+            <label><input type="checkbox" id="filter-udp" checked /> UDP</label>
+            <span class="muted" id="listening-count"></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th>端口</th>
+                <th>协议</th>
+                <th>监听地址</th>
+                <th>进程名</th>
+                <th>PID</th>
+                <th>路径</th>
+              </tr>
+            </thead>
+            <tbody id="listening-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 推荐 -->
+      <section class="page" id="page-recommend">
+        <div class="page-head">
+          <h2>空闲端口段推荐</h2>
+          <p class="muted">
+            严格判定：避开 IANA 公认表 / 内置工具默认表 / 当前监听 / Windows 排除段 / 你声明的端口。
+          </p>
+          <div class="filter-row">
+            <label>范围 <input id="range-start" type="number" min="1" max="65535" value="1024" /> –
+              <input id="range-end" type="number" min="1" max="65535" value="65535" /></label>
+            <label>最小长度 <input id="min-length" type="number" min="1" value="20" /></label>
+            <button id="btn-recompute">重新计算</button>
+            <span class="muted" id="seg-counter"></span>
+          </div>
+        </div>
+        <div class="recommend-card">
+          <div class="recommend-range" id="seg-range">— – —</div>
+          <div class="recommend-meta" id="seg-meta">点击「重新计算」开始</div>
+          <div class="recommend-nav">
+            <button id="btn-prev-seg">◀ 上一段</button>
+            <button id="btn-next-seg">下一段 ▶</button>
+            <button id="btn-random-seg">🎲 随机一段</button>
+          </div>
+        </div>
+        <details class="full-list">
+          <summary>查看所有空闲段</summary>
+          <div class="table-wrap">
+            <table class="grid">
+              <thead>
+                <tr><th>起始</th><th>结束</th><th>长度</th></tr>
+              </thead>
+              <tbody id="all-segs-tbody"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <!-- 查询 -->
+      <section class="page" id="page-query">
+        <div class="page-head">
+          <h2>端口状态查询</h2>
+          <div class="filter-row">
+            <input id="query-input" type="number" min="1" max="65535" placeholder="输入端口号 1–65535" />
+            <button id="btn-query" class="primary">查询</button>
+          </div>
+        </div>
+        <div class="query-result" id="query-result">
+          <p class="muted">输入端口号后回车或点查询。</p>
+        </div>
+      </section>
+
+      <!-- 声明库 -->
+      <section class="page" id="page-declared">
+        <div class="page-head">
+          <h2>本地声明库</h2>
+          <p class="muted">扫描确认入库的端口声明。可重命名、删除。</p>
+          <div class="filter-row">
+            <input id="filter-declared" placeholder="筛选端口或软件名..." />
+            <button id="btn-clear-declared" class="danger-link">🗑 一键清空声明库</button>
+            <span class="muted" id="declared-count"></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th>端口</th>
+                <th>软件 (双击编辑)</th>
+                <th>来源文件</th>
+                <th>行</th>
+                <th>片段</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="declared-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 扫描 -->
+      <section class="page" id="page-scan">
+        <div class="page-head">
+          <h2>配置扫描</h2>
+          <p class="muted">
+            添加扫描路径 → 扫描 → 在候选清单里勾选真正要入库的端口。
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>扫描路径</h3>
+          <div class="filter-row">
+            <input id="scan-path-input" placeholder="路径（可粘贴或浏览）" />
+            <button id="btn-browse-folder">浏览...</button>
+            <input id="scan-label-input" placeholder="标签（选填，留空用文件夹名）" />
+            <button id="btn-add-path" class="primary">添加</button>
+          </div>
+          <div class="table-wrap">
+            <table class="grid">
+              <thead>
+                <tr><th>标签</th><th>路径</th><th>上次扫描</th><th>操作</th></tr>
+              </thead>
+              <tbody id="scan-paths-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <details class="card">
+          <summary><strong>LM Studio 设置（用于「LLM 精炼」）</strong></summary>
+          <div class="filter-row" style="margin-top:8px">
+            <label>Base URL <input id="llm-base-url" placeholder="http://localhost:1234" /></label>
+            <label>模型名 <input id="llm-model" placeholder="local-model" /></label>
+            <label>批大小 <input id="llm-batch" type="number" min="1" max="200" value="5" /></label>
+            <button id="btn-llm-save">保存</button>
+            <button id="btn-llm-test">测试连接</button>
+            <span id="llm-saved-state" class="muted">已保存</span>
+            <span class="muted" id="llm-status">未测试</span>
+          </div>
+          <p class="muted" style="margin:6px 0 0">
+            「测试连接」「LLM 精炼」按钮会自动保存当前表单内容到磁盘。
+            <br />
+            <strong>推理模型（Qwen3 / DeepSeek R1 / QwQ 等）</strong>建议批大小 3–5；普通指令模型（Llama 3 / Qwen2.5-Instruct 等）可以 15–25。
+            App 已尝试通过 <code>chat_template_kwargs.enable_thinking=false</code> 关掉 Qwen3 的思考；不支持的模型靠批小一点撑过去。
+          </p>
+        </details>
+
+        <div class="card" id="candidate-card" hidden>
+          <h3>扫描候选 <span class="muted" id="candidate-summary"></span></h3>
+          <div class="filter-row">
+            <button id="btn-toggle-all">全选/反选</button>
+            <button id="btn-llm-refine">🤖 LLM 精炼</button>
+            <label><input type="checkbox" id="filter-hide-rejected" /> 隐藏 LLM 否决项</label>
+            <input id="filter-candidate" placeholder="筛选候选..." />
+            <span class="muted" id="candidate-selected-count"></span>
+          </div>
+          <div class="scan-progress" id="llm-progress"></div>
+          <details class="llm-debug-card" id="llm-debug-card" hidden>
+            <summary>查看 LLM 链路日志（最近一次精炼）</summary>
+            <div id="llm-debug-content"></div>
+          </details>
+          <div class="table-wrap candidate-wrap">
+            <table class="grid">
+              <thead>
+                <tr>
+                  <th>✓</th>
+                  <th>端口</th>
+                  <th>LLM 判定</th>
+                  <th>建议软件名 (可编辑)</th>
+                  <th>关键词</th>
+                  <th>来源文件</th>
+                  <th>行</th>
+                  <th>上下文</th>
+                </tr>
+              </thead>
+              <tbody id="candidate-tbody"></tbody>
+            </table>
+          </div>
+          <div class="filter-row">
+            <button id="btn-commit-scan" class="primary">入库已勾选</button>
+            <button id="btn-cancel-scan">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 排除段 -->
+      <section class="page" id="page-excluded">
+        <div class="page-head">
+          <h2>Windows 排除端口段</h2>
+          <p class="muted">由 Hyper-V / WSL / WinNAT 等系统组件预留，应用程序无法绑定。</p>
+        </div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead>
+              <tr><th>协议</th><th>起始</th><th>结束</th><th>长度</th></tr>
+            </thead>
+            <tbody id="excluded-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+  </body>
+</html>
