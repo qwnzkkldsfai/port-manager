@@ -2,8 +2,9 @@
 name = "port-manager-app"
 version = "0.1.0"
 description = "Local Port Manager"
-authors = ["local"]
+authors = ["ciudadano-jie"]
 edition = "2021"
+license = "MIT"
 
 [lib]
 name = "port_manager_app_lib"
