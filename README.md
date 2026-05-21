@@ -1,7 +1,9 @@
-# Tauri + Vanilla
+# 新手友好的本地端口管理器
+## 监测已占用的端口和系统端口
+## 根据文件夹路径监测各个项目声明的端口
+## 查询某一特定端口，检视是否被占用/声明 或完全闲置可用
+## 自动推荐一个可用的端口段落
+## 基于本地LLM的端口复核
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Javascript.
-
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+相信你也头疼过，下载了一堆工具，根本记不得谁占了什么端口，自己想新建工具时也不知道哪个端口能用。
+端口查询相关的命令记不住，那就试试这个！
